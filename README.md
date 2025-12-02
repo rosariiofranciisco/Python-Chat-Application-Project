@@ -2,6 +2,9 @@
  
 A simple multi-user chat application built with Python sockets.
 
+## Author
+Франсиско Розарио Диого (Francisco Rosario Diogo)
+
 ## Features
 - Real-time messaging
 - Multiple users support
