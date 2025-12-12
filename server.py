@@ -34,7 +34,12 @@ class ChatServer:
     def broadcast(self, message, sender_socket=None):
         """Send message to all connected clients except the sender"""
         timestamp = datetime.now().strftime("%H:%M:%S")
-        formatted_message = f"[{timestamp}] {message}"
+        
+        # Don't add timestamp to file messages
+        if message.startswith("FILE:"):
+            formatted_message = message
+        else:
+            formatted_message = f"[{timestamp}] {message}"
         
         print(formatted_message)  # Display on server console
         
@@ -49,7 +54,12 @@ class ChatServer:
     def update_user_list(self):
         """Send updated user list to all clients"""
         user_list = "USERS:" + ",".join(self.nicknames)
-        self.broadcast(user_list, None)
+        # Send to all clients including the sender (for GUI updates)
+        for client in self.clients:
+            try:
+                client.send(user_list.encode('utf-8'))
+            except:
+                self.remove_client(client)
     
     def remove_client(self, client_socket):
         """Remove a client and clean up"""
@@ -86,15 +96,24 @@ class ChatServer:
             client_socket.send(emoji_help.encode('utf-8'))
             
             # Notify all users about new connection
-            self.broadcast(f"👋 {nickname} joined the chat!")
+            self.broadcast(f"👋 {nickname} joined the chat!", client_socket)
             
             while True:
                 try:
-                    message = client_socket.recv(1024).decode('utf-8')
+                    message = client_socket.recv(65536).decode('utf-8')  # Increased buffer for files
                     if message:
-                        # Parse emojis in the message before broadcasting
-                        message_with_emojis = self.parse_emojis(message)
-                        self.broadcast(f"{nickname}: {message_with_emojis}", client_socket)
+                        # Check if it's a file message
+                        if message.startswith("FILE:"):
+                            # Add sender info to file message
+                            parts = message.split(":", 3)
+                            if len(parts) == 4:
+                                _, file_name, file_extension, file_content = parts
+                                file_message = f"FILE:{file_name} from {nickname}:{file_extension}:{file_content}"
+                                self.broadcast(file_message, client_socket)
+                        else:
+                            # Parse emojis in the message before broadcasting
+                            message_with_emojis = self.parse_emojis(message)
+                            self.broadcast(f"{nickname}: {message_with_emojis}", client_socket)
                     else:
                         self.remove_client(client_socket)
                         break

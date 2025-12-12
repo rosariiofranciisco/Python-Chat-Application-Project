@@ -14,9 +14,16 @@ class ChatClient:
         """Receive messages from server in a separate thread"""
         while self.running:
             try:
-                message = self.client_socket.recv(1024).decode('utf-8')
+                message = self.client_socket.recv(65536).decode('utf-8')
                 if message:
-                    print(f"\r{message}\nYou: ", end="")
+                    # Skip user list updates and file messages for console client
+                    if not message.startswith("USERS:") and not message.startswith("FILE:"):
+                        print(f"\r{message}\nYou: ", end="")
+                    elif message.startswith("FILE:"):
+                        parts = message.split(":", 3)
+                        if len(parts) == 4:
+                            _, file_name, file_extension, _ = parts
+                            print(f"\r📎 File received: {file_name} (Use GUI client to download)\nYou: ", end="")
                 else:
                     print("\r❌ Connection lost with server")
                     self.running = False
@@ -59,6 +66,8 @@ class ChatClient:
             print(f"{emoji_tip}")
             print("\n💬 Start chatting! (Type 'QUIT' to exit)")
             print("🎭 Use emojis: :) :( :D ;) :P <3 :O")
+            print("📝 Formatting: *bold* _italic_ ~underline~ @mention")
+            print("📎 File sharing available in GUI client only")
             print("-" * 50)
             
             # Start message receiving thread
@@ -78,13 +87,17 @@ class ChatClient:
                     self.running = False
                     break
                 elif message.upper() == 'HELP':
-                    print("Available commands: QUIT, HELP")
+                    print("Available commands: QUIT, HELP, USERS, EMOJIS")
+                    print("Formatting: *bold* _italic_ ~underline~ @username")
                     print("Emoji examples: :) :( :D ;) :P <3 :O :*")
                     continue
                 elif message.upper() == 'EMOJIS':
                     print("Common emojis:")
                     print("  :) 😊  :( 😢  :D 😃  ;) 😉  :P 😛")
                     print("  :O 😮  :* 😘  <3 ❤️ :/ 😕  :| 😐")
+                    continue
+                elif message.upper() == 'USERS':
+                    print("Use GUI client to see online users list")
                     continue
                 
                 self.send_message(message)
