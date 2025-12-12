@@ -1,2 +1,2 @@
-# No external dependencies needed for basic version!
-# This file is for future enhancements 
+# Basic requirements for enhanced GUI client
+pillow>=9.0.0
